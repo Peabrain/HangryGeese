@@ -131,7 +131,7 @@ def path_new(matrix_,enemy_):
     matrix[matrix.shape[0] - 1,:] = 2
     matrix[:,0] = 2
     matrix[:,matrix.shape[1] - 1] = 2
-    data = np.zeros((matrix.shape[0],matrix.shape[1],4))
+    data = np.ones((matrix.shape[0],matrix.shape[1],4))
     pos_food = np.where(matrix == 1)
     pos_food = zip(pos_food[0],pos_food[1])
   
@@ -140,38 +140,46 @@ def path_new(matrix_,enemy_):
         a_e = fill(matrix.copy(),x-1,y,16)
         a_s = fill(matrix.copy(),x,y+1,16)
         a_w = fill(matrix.copy(),x+2,y,16)
-        l = a_w + a_s + a_e + a_n
+        l = (a_w + a_s + a_e + a_n)
         if l > 0:
-            data[y,x,0] = (a_s + a_w + a_e) / l
-            data[y,x,2] = (a_n + a_w + a_e) / l
-            data[y,x,1] = (a_w + a_n + a_s) / l
-            data[y,x,3] = (a_e + a_n + a_s) / l
+            data[y,x,0] = data[y,x,0] + (a_s + a_w + a_e) / l
+            data[y,x,2] = data[y,x,2] + (a_n + a_w + a_e) / l
+            data[y,x,1] = data[y,x,1] + (a_w + a_n + a_s) / l
+            data[y,x,3] = data[y,x,3] + (a_e + a_n + a_s) / l
         else:
-            data[y,x] = 0
+            data[y,x] = 1
 
     for j in range(matrix.shape[0]):
         for i in range(matrix.shape[1]):
 #            if enemy[j,i] > 0:
-            data[j,i] = data[j,i] - enemy[j,i] * 1.001
+            data[j,i] = data[j,i] - enemy[j,i] * 2
 
     pos_danger = np.where(matrix == 2)
     pos_danger = zip(pos_danger[0],pos_danger[1])
     for i,j in pos_danger:
-        data[i,j] = -2
-        
+        if i - 1 >= 0:
+            data[i - 1,j,2] = -1
+        if i + 1 < matrix.shape[0]:
+            data[i + 1,j,0] = -1
+        if j - 1 >= 0:
+            data[i,j - 1,3] = -1
+        if j + 1 < matrix.shape[1]:
+            data[i,j + 1,1] = -1
+        data[i,j] = -1
+
     for k in range(20):
         r = [(i,j) for i in range(matrix.shape[0]) for j in range(matrix.shape[1]) if matrix[i,j] == 0]
         random.shuffle(r)
         for i,j in r:
-            if i - 1 >= 0:
+            if i - 1 >= 0 and matrix[i - 1,j] < 2:
                 data[i,j,0] = np.sum(data[i - 1,j]) / 8
-            if i + 1 < matrix.shape[0]:
+            if i + 1 < matrix.shape[0] and matrix[i + 1,j] < 2:
                 data[i,j,2] = np.sum(data[i + 1,j]) / 8
-            if j - 1 >= 0:
+            if j - 1 >= 0 and matrix[i,j - 1] < 2:
                data[i,j,1] = np.sum(data[i,j - 1]) / 8
-            if j + 1 < matrix.shape[1]:
+            if j + 1 < matrix.shape[1] and matrix[i,j + 1] < 2:
                 data[i,j,3] = np.sum(data[i,j + 1]) / 8
-            
+
     p = data[matrix_.shape[0]:matrix_.shape[0] * 2,matrix_.shape[1]:matrix_.shape[1] * 2]
     return p
 
@@ -222,7 +230,7 @@ def agent(obs_dict, config_dict):
                 markov(matrix_,playground,enemy_row,enemy_column,playground.shape[0],playground.shape[1])
 
     matrix_ = np.abs(matrix_ - 1)
-    playground[player_row,player_column] = 0
+#    playground[player_row,player_column] = 0
     r = path_new(playground,matrix_)
 
     #print(r)
@@ -235,28 +243,38 @@ def agent(obs_dict, config_dict):
     if len(player_goose) == 1:
         if (last_dir[player_index] + 2) % 4 == np.argmax(r[player_row,player_column]):
             r[player_row,player_column,np.argmax(r[player_row,player_column])] = -1000
-    dir_ = ori[np.argmax(r[player_row,player_column])]
+    dir_v = np.array([  [(player_row - 1) % playground.shape[0],player_column],
+                        [player_row,(player_column - 1) % playground.shape[1]],
+                        [(player_row + 1) % playground.shape[0],player_column],
+                        [player_row,(player_column + 1) % playground.shape[1]]
+                    ])
+    min_ = np.min(r[player_row,player_column])
+    dir_ = 0
+    for i in range(4):
+        if min_ < r[player_row,player_column,i] and playground[dir_v[i,0],dir_v[i,1]] < 2:
+            min_ = r[player_row,player_column,i]
+            dir_ = i
+    dir_ = ori[dir_]
     last_dir[player_index] = np.argmax(r[player_row,player_column])
     print(player_index,dir_)
     return dir_
 
 """
-playground = np.array([ [0,2,2,0,0,0,0,2,2,2,0],
-                        [0,0,2,0,1,0,0,0,0,2,2],
-                        [0,0,2,1,0,0,0,2,2,2,2],
-                        [2,0,0,2,0,0,0,0,0,0,2],
-                        [2,0,0,2,0,0,0,2,2,2,0],
-                        [2,0,0,2,2,2,2,2,0,2,0],
-                        [2,2,0,0,0,0,0,0,0,2,0],
+playground = np.array([ [3,0,0,1,0,0,0,2,2,2,2],
+                        [0,0,1,0,2,0,0,2,2,2,0],
+                        [0,0,0,0,2,2,0,2,2,2,0],
+                        [0,0,0,0,0,2,3,0,0,2,2],
+                        [2,0,2,2,0,2,2,0,0,2,2],
+                        [2,2,2,2,0,2,2,2,2,2,2],
+                        [0,0,0,0,0,0,0,2,3,2,2],
                         ],dtype=np.uint8)
 
 
 matrix_ = np.ones((playground.shape[0],playground.shape[1]),dtype=np.float32)
-o = markov(matrix_,playground,2,2,playground.shape[0],playground.shape[1])
-playground[3,3] = 0
-print(playground)
-print(o)
-r = path_new(playground,o)
-print(r)
+markov(matrix_,playground,0,0,playground.shape[0],playground.shape[1])
+markov(matrix_,playground,6,8,playground.shape[0],playground.shape[1])
+#playground[3,6] = 0
+r = path_new(playground,matrix_)
+print(r[2,6],r[3,6])
 
 """
