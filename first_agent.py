@@ -6,7 +6,7 @@ import random
 last_dir = np.array([5,5,5,5])
 
 def fill(matrix,x,y,depth):
-    if x >= matrix.shape[1] or x < 0 or y >= matrix.shape[0] or y < 0 or matrix[y,x] == 2:
+    if x >= matrix.shape[1] or x < 0 or y >= matrix.shape[0] or y < 0 or matrix[y,x] >= 2:
         return 0
 #    print(matrix.shape[0],matrix.shape[1],matrix.shape[0] * matrix.shape[1])
     list_ = np.zeros((matrix.shape[0] * matrix.shape[1],3),dtype=np.int)
@@ -174,7 +174,7 @@ def path_new(matrix_,enemy_,player_row,player_column,player_index,goose_len):
 
     pos_danger = np.where((matrix >= 3) & (matrix != player_index + 3))
     pos_danger = zip(pos_danger[0],pos_danger[1])
-    k = 2.0
+    k = 4.0
     for i,j in pos_danger:
 #        if i - 1 >= 0:
 #            data[i - 1,j,2] = data[i - 1,j,2] - k
