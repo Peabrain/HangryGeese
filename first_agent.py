@@ -13,31 +13,32 @@ def fill(matrix,x,y,depth):
     start = 0
     end = 0
     list_[end] = [x,y,depth]
-    matrix[y,x] = 2
+    matrix[y,x] = 255
     end = end + 1
     while end != start:
         x_,y_,d_ = list_[start]
         start = start + 1
+        d_ = d_ - 1
         if d_ == 0:
             continue
         else:
-            d_ = d_ - 1
-            if y_ - 1 >= 0 and matrix[y_ - 1,x_] != 2:
-                matrix[y_ - 1,x_] = 2          
+            if y_ - 1 >= 0 and matrix[y_ - 1,x_] < 2:
+                matrix[y_ - 1,x_] = 255
                 list_[end] = [x_,y_ - 1,d_]
                 end = end + 1                
-            if y_ + 1 < matrix.shape[0] and matrix[y_ + 1,x_] != 2:
-                matrix[y_ + 1,x_] = 2          
+            if y_ + 1 < matrix.shape[0] and matrix[y_ + 1,x_] < 2:
+                matrix[y_ + 1,x_] = 255        
                 list_[end] = [x_,y_ + 1,d_]
                 end = end + 1      
-            if x_ - 1 >= 0 and matrix[y_,x_ - 1] != 2:
-                matrix[y_,x_ - 1] = 2          
+            if x_ - 1 >= 0 and matrix[y_,x_ - 1] < 2:
+                matrix[y_,x_ - 1] = 255        
                 list_[end] = [x_ - 1,y_,d_]
                 end = end + 1                
-            if x_ + 1 < matrix.shape[1] and matrix[y_,x_ + 1] != 2:
-                matrix[y_,x_ + 1] = 2          
+            if x_ + 1 < matrix.shape[1] and matrix[y_,x_ + 1] < 2:
+                matrix[y_,x_ + 1] = 255        
                 list_[end] = [x_ + 1,y_,d_]
-                end = end + 1                
+                end = end + 1          
+    end = np.sum(matrix == 255)      
     return end
 
 
@@ -92,96 +93,134 @@ def path(matrix_):
     p = data[matrix_.shape[0]:matrix_.shape[0] * 2,matrix_.shape[1]:matrix_.shape[1] * 2]
     return p
 
-def markov(matrix,playground,y_,x_,h,w):
+def markov(playground,y_,x_,h,w):
+    matrix = np.zeros((playground.shape[0],playground.shape[1]),dtype=np.float32)
     deep = 0
-    deep_max = 10
-    list_ = np.zeros((11 * 7 * 10,3),dtype=np.int32)
+    deep_max = 2
+    list_ = np.zeros((11 * 7 * 10,4),dtype=np.int32)
     start = 0
     end = 0
-    list_[end] = [y_,x_,deep]
+    list_[end] = [y_,x_,deep,1]
     end = end + 1
     
     while end != start:
-        y,x,d = list_[start]
+        y,x,d,l_ = list_[start]
         start = start + 1
-        l = (1.0 - 1.0 / float(d + 1))**2
+
+        l = 0
+        if playground[(y - 1) % matrix.shape[0],x] < 2:
+            l = l + 1
+        if playground[(y + 1) % matrix.shape[0],x] < 2:
+            l = l + 1
+        if playground[y,(x - 1) % matrix.shape[1]] < 2:
+            l = l + 1
+        if playground[y,(x + 1) % matrix.shape[1]] < 2:
+            l = l + 1
+        if l == 0:
+            continue
+        l = 1 / l       
+        l = l * l_
+#        l =  # (1.0 - 1.0 / float(d + 1)**1)
 #        print(y,x,l)
-        if l < matrix[(y - 1) % matrix.shape[0],x] and playground[(y - 1) % matrix.shape[0],x] < 2 and d + 1 < deep_max:
+        if matrix[(y - 1) % matrix.shape[0],x] == 0 and playground[(y - 1) % matrix.shape[0],x] < 2 and d + 1 < deep_max:
             matrix[(y - 1) % matrix.shape[0],x] = l
-            list_[end] = [(y - 1) % matrix.shape[0],x,d + 1]
+            list_[end] = [(y - 1) % matrix.shape[0],x,d + 1,l]
             end = end + 1
-        if l < matrix[(y + 1) % matrix.shape[0],x] and playground[(y + 1) % matrix.shape[0],x] < 2 and d + 1 < deep_max:
+        if matrix[(y + 1) % matrix.shape[0],x] == 0 and playground[(y + 1) % matrix.shape[0],x] < 2 and d + 1 < deep_max:
             matrix[(y + 1) % matrix.shape[0],x] = l
-            list_[end] = [(y + 1) % matrix.shape[0],x,d + 1]
+            list_[end] = [(y + 1) % matrix.shape[0],x,d + 1,l]
             end = end + 1
-        if l < matrix[y,(x - 1) % matrix.shape[1]] and  playground[y,(x - 1) % matrix.shape[1]] < 2 and d + 1 < deep_max:
+        if matrix[y,(x - 1) % matrix.shape[1]] == 0 and playground[y,(x - 1) % matrix.shape[1]] < 2 and d + 1 < deep_max:
             matrix[y,(x - 1) % matrix.shape[1]] = l
-            list_[end] = [y,(x - 1) % matrix.shape[1],d + 1]
+            list_[end] = [y,(x - 1) % matrix.shape[1],d + 1,l]
             end = end + 1
-        if l < matrix[y,(x + 1) % matrix.shape[1]] and playground[y,(x + 1) % matrix.shape[1]] < 2 and d + 1 < deep_max:
+        if matrix[y,(x + 1) % matrix.shape[1]] == 0 and playground[y,(x + 1) % matrix.shape[1]] < 2 and d + 1 < deep_max:
             matrix[y,(x + 1) % matrix.shape[1]] = l
-            list_[end] = [y,(x + 1) % matrix.shape[1],d + 1]
+            list_[end] = [y,(x + 1) % matrix.shape[1],d + 1,l]
             end = end + 1
 #        print(matrix)     
+    return matrix
 
-def path_new(matrix_,enemy_):
+def path_new(matrix_,enemy_,player_row,player_column,player_index,goose_len):
     enemy = np.tile(enemy_, (3,3))
     matrix = np.tile(matrix_, (3,3))
     matrix[0,:] = 2
     matrix[matrix.shape[0] - 1,:] = 2
     matrix[:,0] = 2
     matrix[:,matrix.shape[1] - 1] = 2
-    data = np.ones((matrix.shape[0],matrix.shape[1],4))
+    data = np.zeros((matrix.shape[0],matrix.shape[1],4))
     pos_food = np.where(matrix == 1)
     pos_food = zip(pos_food[0],pos_food[1])
-  
+
+    p = 1
     for y,x in pos_food:
-        a_n = fill(matrix.copy(),x,y-1,16)
-        a_e = fill(matrix.copy(),x-1,y,16)
-        a_s = fill(matrix.copy(),x,y+1,16)
-        a_w = fill(matrix.copy(),x+2,y,16)
+        a_n = fill(matrix.copy(),x,y - 1,16)
+        a_e = fill(matrix.copy(),x - 1,y,16)
+        a_s = fill(matrix.copy(),x,y + 1,16)
+        a_w = fill(matrix.copy(),x + 1,y,16)
         l = (a_w + a_s + a_e + a_n)
+#        data[y,x] = 2
         if l > 0:
-            data[y,x,0] = data[y,x,0] + (a_s + a_w + a_e) / l
-            data[y,x,2] = data[y,x,2] + (a_n + a_w + a_e) / l
-            data[y,x,1] = data[y,x,1] + (a_w + a_n + a_s) / l
-            data[y,x,3] = data[y,x,3] + (a_e + a_n + a_s) / l
+            data[y,x,0] = data[y,x,0] * p + (a_s + a_w + a_e) / l
+            data[y,x,2] = data[y,x,2] * p + (a_n + a_w + a_e) / l
+            data[y,x,1] = data[y,x,1] * p + (a_w + a_n + a_s) / l
+            data[y,x,3] = data[y,x,3] * p + (a_e + a_n + a_s) / l
         else:
-            data[y,x] = 1
+            data[y,x] = 2
 
-    for j in range(matrix.shape[0]):
-        for i in range(matrix.shape[1]):
-#            if enemy[j,i] > 0:
-            data[j,i] = data[j,i] - enemy[j,i] * 2
+#    for j in range(matrix.shape[0]):
+#        for i in range(matrix.shape[1]):
+#            data[j,i] = data[j,i] * enemy[j,i]
 
-    pos_danger = np.where(matrix == 2)
+    pos_danger = np.where((matrix >= 3) & (matrix != player_index + 3))
     pos_danger = zip(pos_danger[0],pos_danger[1])
+    k = 2.0
     for i,j in pos_danger:
-        if i - 1 >= 0:
-            data[i - 1,j,2] = -1
-        if i + 1 < matrix.shape[0]:
-            data[i + 1,j,0] = -1
-        if j - 1 >= 0:
-            data[i,j - 1,3] = -1
-        if j + 1 < matrix.shape[1]:
-            data[i,j + 1,1] = -1
-        data[i,j] = -1
+#        if i - 1 >= 0:
+#            data[i - 1,j,2] = data[i - 1,j,2] - k
+#        if i + 1 < matrix.shape[0]:
+#            data[i + 1,j,0] = data[i + 1,j,0] - k
+#        if j - 1 >= 0:
+#            data[i,j - 1,3] = data[i,j - 1,3] - k
+#        if j + 1 < matrix.shape[1]:
+#            data[i,j + 1,1] = data[i,j + 1,1] - k
+        if i - 1 >= 0 and matrix[i - 1,j] != player_index + 3:
+            data[i - 1,j] = -k
+        if i + 1 < matrix.shape[0] and matrix[i + 1,j] != player_index + 3:
+            data[i + 1,j] = -k
+        if j - 1 >= 0 and matrix[i,j - 1] != player_index + 3:
+            data[i,j - 1] = -k
+        if j + 1 < matrix.shape[1] and matrix[i,j + 1] != player_index + 3:
+            data[i,j + 1] = -k
+#        data[i,j] = -k
 
+#    print(player_row + matrix_.shape[0],player_column + matrix_.shape[1],goose_len)
+    a_w = fill(matrix.copy(), player_column + matrix_.shape[1] - 1, player_row + matrix_.shape[0], goose_len + 1)
+    a_n = fill(matrix.copy(), player_column + matrix_.shape[1], player_row + matrix_.shape[0] - 1, goose_len + 1)
+    a_e = fill(matrix.copy(), player_column + matrix_.shape[1] + 1, player_row + matrix_.shape[0], goose_len + 1)
+    a_s = fill(matrix.copy(), player_column + matrix_.shape[1], player_row + matrix_.shape[0] + 1, goose_len + 1)
+
+    l_ch = [a_n, a_w, a_s, a_e]
+#    print(l_ch)
+
+    g = 0.1
+    a = 0.01
     for k in range(20):
-        r = [(i,j) for i in range(matrix.shape[0]) for j in range(matrix.shape[1]) if matrix[i,j] == 0]
+        r = [(i,j) for i in range(matrix.shape[0]) for j in range(matrix.shape[1]) if (matrix[i,j] < 2 or matrix[i,j] == player_index + 3)]
         random.shuffle(r)
         for i,j in r:
             if i - 1 >= 0 and matrix[i - 1,j] < 2:
-                data[i,j,0] = np.sum(data[i - 1,j]) / 8
+                data[i,j,0] = data[i,j,0] + (g * np.max(data[i - 1,j]) - data[i,j,0]) * a
             if i + 1 < matrix.shape[0] and matrix[i + 1,j] < 2:
-                data[i,j,2] = np.sum(data[i + 1,j]) / 8
+                data[i,j,2] = data[i,j,2] + (g * np.max(data[i + 1,j]) - data[i,j,2]) * a
             if j - 1 >= 0 and matrix[i,j - 1] < 2:
-               data[i,j,1] = np.sum(data[i,j - 1]) / 8
+               data[i,j,1] = data[i,j,1] + (g * np.max(data[i,j - 1]) - data[i,j,1]) * a
             if j + 1 < matrix.shape[1] and matrix[i,j + 1] < 2:
-                data[i,j,3] = np.sum(data[i,j + 1]) / 8
+                data[i,j,3] = data[i,j,3] + (g * np.max(data[i,j + 1]) - data[i,j,3]) * a
 
     p = data[matrix_.shape[0]:matrix_.shape[0] * 2,matrix_.shape[1]:matrix_.shape[1] * 2]
-    return p
+
+    return p, l_ch
 
 
 def agent(obs_dict, config_dict):
@@ -202,23 +241,18 @@ def agent(obs_dict, config_dict):
     playground = np.zeros((7,11),dtype=np.uint8)
     for i in range(len(observation.geese)):
         goose = observation.geese[i]
-        for j in range(0,len(goose)):
-            r,c = row_col(goose[j], configuration.columns)
+        if len(goose) > 0:
+            for j in range(0,len(goose)):
+                r,c = row_col(goose[j], configuration.columns)
+                r = r % 7
+                c = c % 11
+                playground[r,c] = 2
+            r,c = row_col(goose[0], configuration.columns)
             r = r % 7
             c = c % 11
-            playground[r,c] = 2
+            playground[r,c] = 3 + i
 
-    playground[player_row,player_column] = 0
-            
-    for food in observation.food:
-        r, c = row_col(food, configuration.columns)
-        r = r % 7
-        c = c % 11
-        playground[r,c] = 1
-
-    o = None
-
-    matrix_ = np.ones((playground.shape[0],playground.shape[1]),dtype=np.float32)
+    matrix_ = np.zeros((playground.shape[0],playground.shape[1]),dtype=np.float32)
     for i in range(len(observation.geese)):
         if i != player_index:
             enemy_goose = observation.geese[i]
@@ -227,11 +261,19 @@ def agent(obs_dict, config_dict):
                 enemy_row, enemy_column = row_col(enemy_head, configuration.columns)
                 enemy_row = enemy_row % 7
                 enemy_column = enemy_column % 11                   
-                markov(matrix_,playground,enemy_row,enemy_column,playground.shape[0],playground.shape[1])
+                m = markov(playground,enemy_row,enemy_column,playground.shape[0],playground.shape[1])
+                matrix_ = np.maximum(matrix_,m)
 
-    matrix_ = np.abs(matrix_ - 1)
-#    playground[player_row,player_column] = 0
-    r = path_new(playground,matrix_)
+    matrix_ = 1 - matrix_
+#    matrix_ = np.abs(matrix_ - 1)
+
+    for food in observation.food:
+        r, c = row_col(food, configuration.columns)
+        r = r % 7
+        c = c % 11
+        playground[r,c] = 1
+
+    r, l_ch = path_new(playground,matrix_,player_row,player_column,player_index,len(player_goose))
 
     #print(r)
 #    print(o)
@@ -240,41 +282,52 @@ def agent(obs_dict, config_dict):
 
     ori = np.array([Action.NORTH.name,Action.WEST.name,Action.SOUTH.name,Action.EAST.name,'*'])
 
-    if len(player_goose) == 1:
-        if (last_dir[player_index] + 2) % 4 == np.argmax(r[player_row,player_column]):
-            r[player_row,player_column,np.argmax(r[player_row,player_column])] = -1000
+#    if len(player_goose) == 1:
+#        if (last_dir[player_index] + 2) % 4 == np.argmax(r[player_row,player_column]):
+#            r[player_row,player_column,np.argmax(r[player_row,player_column])] = -1000
     dir_v = np.array([  [(player_row - 1) % playground.shape[0],player_column],
                         [player_row,(player_column - 1) % playground.shape[1]],
                         [(player_row + 1) % playground.shape[0],player_column],
                         [player_row,(player_column + 1) % playground.shape[1]]
                     ])
-    min_ = np.min(r[player_row,player_column])
-    dir_ = 0
+
+#    print(playground)
+    l_ch_ = np.array(l_ch) >= len(player_goose)
+    min_ = np.min(r[player_row,player_column]) - 1
+    dir_ = -1
     for i in range(4):
-        if min_ < r[player_row,player_column,i] and playground[dir_v[i,0],dir_v[i,1]] < 2:
+        if min_ < r[player_row,player_column,i] and playground[dir_v[i,0],dir_v[i,1]] < 2 and l_ch_[i] == True and (last_dir[player_index] + 2) % 4 != i:
             min_ = r[player_row,player_column,i]
             dir_ = i
+    if dir_ == -1:
+        print('problem')
+        dir_ = 0
+    last_dir[player_index] = dir_
     dir_ = ori[dir_]
-    last_dir[player_index] = np.argmax(r[player_row,player_column])
-    print(player_index,dir_)
+    print(player_index,dir_,len(player_goose),l_ch,l_ch_,r[player_row,player_column])
     return dir_
 
 """
-playground = np.array([ [3,0,0,1,0,0,0,2,2,2,2],
-                        [0,0,1,0,2,0,0,2,2,2,0],
-                        [0,0,0,0,2,2,0,2,2,2,0],
-                        [0,0,0,0,0,2,3,0,0,2,2],
-                        [2,0,2,2,0,2,2,0,0,2,2],
+playground = np.array([ [2,0,0,0,0,0,0,0,0,3,2],
+                        [0,0,0,0,1,0,0,0,2,0,0],
+                        [0,0,0,3,0,0,0,0,4,0,0],
+                        [0,2,2,2,0,0,0,2,0,0,1],
                         [2,2,2,2,0,2,2,2,2,2,2],
-                        [0,0,0,0,0,0,0,2,3,2,2],
+                        [0,2,2,3,0,0,3,0,0,0,0],
+                        [2,0,0,0,0,0,0,0,2,0,0],
                         ],dtype=np.uint8)
 
 
-matrix_ = np.ones((playground.shape[0],playground.shape[1]),dtype=np.float32)
-markov(matrix_,playground,0,0,playground.shape[0],playground.shape[1])
-markov(matrix_,playground,6,8,playground.shape[0],playground.shape[1])
-#playground[3,6] = 0
-r = path_new(playground,matrix_)
-print(r[2,6],r[3,6])
+matrix_ = np.zeros((playground.shape[0],playground.shape[1]),dtype=np.float32)
+#markov(matrix_,playground,0,0,playground.shape[0],playground.shape[1])
+for j,i in [(5,3),(5,6),(0,9)]:
+    m = markov(playground,j,i,playground.shape[0],playground.shape[1])
+    matrix_ = np.maximum(matrix_,m)
+matrix_ = 1 - matrix_
 
+print(playground)
+print(matrix_)
+playground[2,3] = 0
+r = path_new(playground,matrix_)
+print(r[2,3])
 """
