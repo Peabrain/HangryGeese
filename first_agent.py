@@ -293,15 +293,20 @@ def agent(obs_dict, config_dict):
 
 #    print(playground)
     l_ch_ = np.array(l_ch) >= len(player_goose)
-    min_ = np.min(r[player_row,player_column]) - 1
-    dir_ = -1
-    for i in range(4):
-        if min_ < r[player_row,player_column,i] and playground[dir_v[i,0],dir_v[i,1]] < 2 and l_ch_[i] == True and (last_dir[player_index] + 2) % 4 != i:
-            min_ = r[player_row,player_column,i]
-            dir_ = i
-    if dir_ == -1:
-        print('problem')
-        dir_ = 0
+
+    if np.sum(l_ch_ == True) == 0 or np.sum(r[player_row,player_column] == 0) == 4:
+        l_ch[(last_dir[player_index] + 2) % 4] = 0
+        dir_ = np.argmax(l_ch)
+    else:
+        min_ = np.min(r[player_row,player_column]) - 1
+        dir_ = -1
+        steps = 0
+        for i in range(4):
+            if min_ < r[player_row,player_column,i] and playground[dir_v[i,0],dir_v[i,1]] < 2 and l_ch_[i] == True and (last_dir[player_index] + 2) % 4 != i:
+                min_ = r[player_row,player_column,i]
+                dir_ = i
+        if dir_ == -1:
+            dir_ = 0
     last_dir[player_index] = dir_
     dir_ = ori[dir_]
     print(player_index,dir_,len(player_goose),l_ch,l_ch_,r[player_row,player_column])
