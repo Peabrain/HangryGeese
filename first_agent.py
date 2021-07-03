@@ -165,8 +165,8 @@ def path_new(matrix_,enemy_,player_row,player_column,player_index,goose_len):
             data[y,x,2] = data[y,x,2] * p + (a_n + a_w + a_e) / l
             data[y,x,1] = data[y,x,1] * p + (a_w + a_n + a_s) / l
             data[y,x,3] = data[y,x,3] * p + (a_e + a_n + a_s) / l
-        else:
-            data[y,x] = 2
+#        else:
+#            data[y,x] = 2
 
 #    for j in range(matrix.shape[0]):
 #        for i in range(matrix.shape[1]):
@@ -174,7 +174,7 @@ def path_new(matrix_,enemy_,player_row,player_column,player_index,goose_len):
 
     pos_danger = np.where((matrix >= 3) & (matrix != player_index + 3))
     pos_danger = zip(pos_danger[0],pos_danger[1])
-    k = 4.0
+    k = 2.0
     for i,j in pos_danger:
 #        if i - 1 >= 0:
 #            data[i - 1,j,2] = data[i - 1,j,2] - k
@@ -185,13 +185,13 @@ def path_new(matrix_,enemy_,player_row,player_column,player_index,goose_len):
 #        if j + 1 < matrix.shape[1]:
 #            data[i,j + 1,1] = data[i,j + 1,1] - k
         if i - 1 >= 0 and matrix[i - 1,j] != player_index + 3:
-            data[i - 1,j] = -k
+            data[i - 1,j] = data[i - 1,j] - k
         if i + 1 < matrix.shape[0] and matrix[i + 1,j] != player_index + 3:
-            data[i + 1,j] = -k
+            data[i + 1,j] = data[i + 1,j] - k
         if j - 1 >= 0 and matrix[i,j - 1] != player_index + 3:
-            data[i,j - 1] = -k
+            data[i,j - 1] = data[i,j - 1] - k
         if j + 1 < matrix.shape[1] and matrix[i,j + 1] != player_index + 3:
-            data[i,j + 1] = -k
+            data[i,j + 1] = data[i,j + 1] - k
 #        data[i,j] = -k
 
 #    print(player_row + matrix_.shape[0],player_column + matrix_.shape[1],goose_len)
