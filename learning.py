@@ -71,9 +71,9 @@ def createModel():
     i0 = keras.layers.Input(shape=(3,target_shape[0], target_shape[1],9))
     x = i0
 #    x = tf.transpose(x, [0, 2, 3, 1])
-    x = keras.layers.ConvLSTM2D(filters=8, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+    x = keras.layers.ConvLSTM2D(filters=8, kernel_size=(3,3), padding='same',activation='relu',return_sequences=True)(x)
 #    x = keras.layers.ReLU()(x)
-    x = keras.layers.ConvLSTM2D(filters=32, kernel_size=(3,3), padding='same')(x)
+    x = keras.layers.ConvLSTM2D(filters=32, kernel_size=(3,3), padding='same',activation='relu')(x)
 #    x = keras.layers.ReLU()(x)
 #    x = tf.keras.layers.Reshape(target_shape=(target_shape[0] * target_shape[1],32))(x)
 #    x = tf.keras.layers.Conv1D(filters=4,kernel_size=3,padding='valid')(x)
@@ -307,7 +307,7 @@ def play_game(eps,model,memory):
                     for j in range(2):
                         game.MemoryStepsNext[i][j] = game.MemoryStepsNext[i][j + 1]
                     game.MemorySteps[i][2] = playground_tn[i]
-                step = Step(st = game.MemorySteps[i],stn = game.MemoryStepsNext[i], at = action[i], rt = reward[i], done = dones[i])
+                step = Step(st = game.MemorySteps[i].copy(),stn = game.MemoryStepsNext[i].copy(), at = action[i], rt = reward[i], done = dones[i])
                 memory.append(step)
         count -= 1
 
