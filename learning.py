@@ -32,6 +32,8 @@ dir_ = ['NORTH', 'WEST', 'SOUTH', 'EAST']
 playground_shape = (7,11)
 target_shape = (11,11)
 
+memorySize = 1
+
 def transfer_weights_partially(source, target, lr=0.5):
     wts = source.get_weights()
     twts = target.get_weights()
@@ -68,7 +70,7 @@ def res(x):
 def createModel():
     dropout = 0.3
 
-    i0 = keras.layers.Input(shape=(3,target_shape[0], target_shape[1],9))
+    i0 = keras.layers.Input(shape=(memorySize,target_shape[0], target_shape[1],9))
     x = i0
 #    x = tf.transpose(x, [0, 2, 3, 1])
     x = keras.layers.ConvLSTM2D(filters=8, kernel_size=(3,3), padding='same',activation='relu',return_sequences=True)(x)
@@ -155,8 +157,8 @@ class Game:
         random.shuffle(self.food)
         self.food = self.food[:2]
         self.round = 0
-        self.MemorySteps = [np.zeros((3,target_shape[0],target_shape[1]),dtype=np.uint8)] * 4
-        self.MemoryStepsNext = [np.zeros((3,target_shape[0],target_shape[1]),dtype=np.uint8)] * 4
+        self.MemorySteps = [np.zeros((memorySize,target_shape[0],target_shape[1]),dtype=np.uint8)] * 4
+        self.MemoryStepsNext = [np.zeros((memorySize,target_shape[0],target_shape[1]),dtype=np.uint8)] * 4
     
     def do_action(self,actions_rel):
         self.round += 1
@@ -275,12 +277,12 @@ def play_game(eps,model,memory):
         for i in range(len(game.player)):
             if len(game.player[i]) > 0:
                 if game.MemorySteps[i] is None:
-                    for j in range(3):
+                    for j in range(memorySize):
                         game.MemorySteps[i,j] = playground_t[i]
                 else:
-                    for j in range(2):
+                    for j in range(memorySize - 1):
                         game.MemorySteps[i][j] = game.MemorySteps[i][j + 1]
-                    game.MemorySteps[i][2] = playground_t[i]
+                    game.MemorySteps[i][memorySize - 1] = playground_t[i]
                 if random.random() < eps:
                     action[i] = np.random.randint(3)
                 else:
@@ -302,11 +304,12 @@ def play_game(eps,model,memory):
 
                 playground_tn = getPlayGround(game.player,game.food,game.last_action[i],i)
                 if game.MemoryStepsNext[i] is None:
+                    for j in range(memorySize):
                         game.MemoryStepsNext[i][j] = playground_tn
                 else:
-                    for j in range(2):
+                    for j in range(memorySize - 1):
                         game.MemoryStepsNext[i][j] = game.MemoryStepsNext[i][j + 1]
-                    game.MemorySteps[i][2] = playground_tn[i]
+                    game.MemorySteps[i][memorySize - 1] = playground_tn[i]
                 step = Step(st = game.MemorySteps[i].copy(),stn = game.MemoryStepsNext[i].copy(), at = action[i], rt = reward[i], done = dones[i])
                 memory.append(step)
         count -= 1
@@ -340,6 +343,10 @@ def my_main():
 
     for k in range(100000):
         sample = random.sample(memory,sample_num)
+        for i in range(5):
+            print(sample[i].st)
+
+        quit()
 
     #    target_vectors = model_.predict(np.array([i.st for i in sample]))
     #    fut_actions = model_target.predict(np.array([i.stn for i in sample]))
