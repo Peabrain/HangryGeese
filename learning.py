@@ -72,12 +72,23 @@ def createModel():
 
     i0 = keras.layers.Input(shape=(memorySize,target_shape[0], target_shape[1],1))
     x = i0
+    x = keras.layers.Reshape((memorySize * target_shape[0] * target_shape[1],1))(x)
+    x = keras.layers.Embedding(9,8)(x)
+    x = keras.layers.Reshape((memorySize,target_shape[0], target_shape[1],8))(x)
 #    x = tf.transpose(x, [0, 2, 3, 1])
+    x = keras.layers.ConvLSTM2D(filters=64, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+    x = keras.layers.ConvLSTM2D(filters=64, kernel_size=(3,3), padding='same',return_sequences=True)(x)
     x = keras.layers.ConvLSTM2D(filters=64, kernel_size=(3,3), padding='same',return_sequences=True)(x)
     x = keras.layers.MaxPool3D((1,2,2))(x)
 #    x = keras.layers.ReLU()(x)
-    x = keras.layers.ConvLSTM2D(filters=128, kernel_size=(3,3), padding='same',return_sequences=True)(x)
-    x = keras.layers.MaxPool3D((1,2,2))(x)
+#    x = keras.layers.ConvLSTM2D(filters=16, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+#    x = keras.layers.ConvLSTM2D(filters=16, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+#    x = keras.layers.ConvLSTM2D(filters=16, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+#    x = keras.layers.MaxPool3D((1,2,2))(x)
+#    x = keras.layers.ConvLSTM2D(filters=32, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+#    x = keras.layers.ConvLSTM2D(filters=32, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+#    x = keras.layers.ConvLSTM2D(filters=32, kernel_size=(3,3), padding='same',return_sequences=True)(x)
+#    x = keras.layers.MaxPool3D((1,2,2))(x)
     print(x.shape)
 #    x = keras.layers.ConvLSTM2D(filters=128, kernel_size=(3,3), padding='same')(x)#,return_sequences=True)(x)
 #    x = keras.layers.MaxPool3D()(x)
@@ -169,6 +180,7 @@ class Game:
         self.MemoryStepsNext = [np.zeros((memorySize,target_shape[0],target_shape[1]),dtype=np.uint8)] * 4
     
     def do_action(self,actions_rel):
+        winner = 0
         self.round += 1
         reward = [None] * len(self.player)
         new_pos = [None] * len(self.player)
@@ -217,7 +229,7 @@ class Game:
                 for j in range(len(self.player)):
                     new_player_set += self.player[j][int(i == j):]
                 if self.player[i][0] in new_player_set:
-                    reward[i] = -len(self.player[i])#(self.round * 2 + len(self.player[i]))
+                    reward[i] = -2 # len(self.player[i])#(self.round * 2 + len(self.player[i]))
                     killed = True
                     dones[i] = True
                     self.player[i] = []
@@ -257,10 +269,11 @@ class Game:
                 pl_count += 1
                 pl_count_idx = i
         if pl_count == 1:
-            reward[pl_count_idx] = self.round * 2 + len(self.player[pl_count_idx])
+            winner = self.round * 2 + len(self.player[pl_count_idx])
+#            reward[pl_count_idx] += 2 # self.round * 2 + len(self.player[pl_count_idx])
             dones[pl_count_idx] = True
 
-        return reward, dones
+        return reward, dones, winner
 
     def get_playground(self,player_idx):
         if len(self.player[player_idx]) > 0:
@@ -283,6 +296,7 @@ def play_game(eps,model,memory):
     count = 200
     rewards = [0] * len(game.player)
     done_count = 0
+    winner = 0
     while count > 0 and done_count != len(game.player):
         action = [None] * len(game.player)
 
@@ -302,11 +316,11 @@ def play_game(eps,model,memory):
 #                    print(game.MemorySteps[i].shape)
                     X = np.expand_dims(game.MemorySteps[i],axis=0)
 #                    target_vector = model.predict(keras.backend.one_hot(X,num_classes=9))[0]
-                    target_vector = model.predict(X / 8)[0]
+                    target_vector = model.predict(X)[0]
                     action[i] = np.argmax(target_vector)
 #                print(game.MemorySteps[i])
 
-        reward, dones = game.do_action(action)
+        reward, dones, winner = game.do_action(action)
         done_count = 0
         for i in range(len(game.player)):
             if not (reward[i] is None):
@@ -328,7 +342,8 @@ def play_game(eps,model,memory):
                 memory.append(step)
         count -= 1
 
-    return np.array(rewards,dtype=np.int32)
+
+    return np.array(rewards,dtype=np.int32),game.round,winner
 
 def my_main():
     eps = 1.0
@@ -339,6 +354,8 @@ def my_main():
     model_target.summary()
     memory = Deque()
     rewards = np.zeros((4))
+    rounds = 0
+    winners = 0
 
 #    if os.path.exists('memory.file'):
 #        filehandler = open('memory.file', 'rb') 
@@ -347,7 +364,10 @@ def my_main():
 #        print('memory.file loaded')
 #    else:
     for i in range(10000):
-        rewards += play_game(eps,model_target,memory)
+        re,ro,wi = play_game(eps,model_target,memory)
+        rewards += re
+        rounds += ro
+        winners += wi
     print(rewards)
 #    filehandler = open('memory.file', 'wb') 
 #    cPickle.dump(memory,filehandler)
@@ -364,9 +384,9 @@ def my_main():
 #        X = keras.backend.one_hot(np.array([i.st for i in sample]),num_classes=9)
         X = np.array([i.st for i in sample])
 
-        target_vectors = model_.predict(X / 8)
+        target_vectors = model_.predict(X)
 #        fut_actions = model_target.predict(keras.backend.one_hot([i.stn for i in sample],num_classes=9))
-        fut_actions = model_target.predict(np.array([i.stn for i in sample]) / 8)
+        fut_actions = model_target.predict(np.array([i.stn for i in sample]))
 
 #        X = np.zeros((sample_num,target_shape[0],target_shape[1],9))
         Y = np.zeros((sample_num,3))
@@ -388,20 +408,25 @@ def my_main():
             Y[i] = target_vector
             M[i] = mask
 
-        model_training.fit([X / 8,Y,M],Y,epochs=1,verbose=0)#,validation_split=0.1)
+        model_training.fit([X,Y,M],Y,epochs=1,verbose=0)#,validation_split=0.1)
 
-        memory.pop()
+#        memory.pop()
         for i in range(1):
             play_game(eps,model_target,memory)
 
         if (k + 1) % 50 == 0:
             print('')
-            transfer_weights_partially(model_,model_target,0.25)
+            transfer_weights_partially(model_,model_target,1)
             rewards = np.zeros((4),dtype=np.int32)
+            rounds = 0
+            winners = 0
             for i in range(1):
                 print('+', end='',flush=True)
-                rewards += play_game(0,model_target,memory)
-            print(' test: ',k // 50,rewards,np.max(rewards),np.sum(rewards),eps)
+                re,ro,wi = play_game(0,model_target,memory)
+                rewards += re
+                rounds += ro
+                winners += wi
+            print(' test: ',k // 50,rewards,np.max(rewards),np.sum(rewards),rounds,winners,eps)
             model_target.save('./model_target')
         else:
             print('*', end='',flush=True)
