@@ -95,21 +95,26 @@ class MyModel(keras.Model):
         self.dense2 = keras.layers.Dense(256,activation='relu')
 #        self.relu5 = keras.layers.ReLU()
 
-        self.convlstm10 = keras.layers.ConvLSTM2D(32,kernel_size=(3,3),return_sequences=True)
-        self.convlstm11 = keras.layers.ConvLSTM2D(32,kernel_size=(3,3),return_sequences=True)
-        self.convlstm12 = keras.layers.ConvLSTM2D(32,kernel_size=(3,3),return_sequences=True)
-        self.convlstm13 = keras.layers.ConvLSTM2D(32,kernel_size=(3,3),return_sequences=True)
-        self.convlstm14 = keras.layers.ConvLSTM2D(32,kernel_size=(3,3),return_sequences=False)
+        self.convlstm10 = keras.layers.ConvLSTM2D(32,kernel_size=(3,3),padding='same',return_sequences=True)
+        self.maxpool3d10 = keras.layers.MaxPool3D((1,2,2))
+        self.convlstm11 = keras.layers.ConvLSTM2D(128,kernel_size=(3,3),padding='same',return_sequences=True)
+        self.maxpool3d11 = keras.layers.MaxPool3D((1,2,2))
+#        self.convlstm11 = keras.layers.ConvLSTM2D(16,kernel_size=(3,3),return_sequences=True)
+#        self.convlstm12 = keras.layers.ConvLSTM2D(16,kernel_size=(3,3),return_sequences=True)
+#        self.convlstm13 = keras.layers.ConvLSTM2D(16,kernel_size=(3,3),return_sequences=True)
+#        self.convlstm14 = keras.layers.ConvLSTM2D(16,kernel_size=(3,3),return_sequences=True)
 
         self.V = keras.layers.Dense(1,activation=None)
         self.A = keras.layers.Dense(3,activation=None)
 
     def mm(self,state):
         x = self.convlstm10(state)
+        x = self.maxpool3d10(x)
         x = self.convlstm11(x)
-        x = self.convlstm12(x)
-        x = self.convlstm13(x)
-        x = self.convlstm14(x)
+        x = self.maxpool3d11(x)
+#        x = self.convlstm12(x)
+#        x = self.convlstm13(x)
+#        x = self.convlstm14(x)
         return x
         x = self.conv10(state)
         x = self.conv11(x)
@@ -451,6 +456,10 @@ def play_game(eps,model,memory,game_=None,pr=False):
                 if reward[i] < 0:
                     reward[i] = 0
                 if not (memory is None):
+                    if len(memory) >= 50000:
+            #            memory = random.sample(memory,90000)
+                        del memory[random.randint(0,len(memory) - 1)]
+#                   memory.append(step)
                     if rt == 0:
                         memory.append(step)
                     else:
@@ -567,9 +576,6 @@ def my_main():
         R = np.reshape(R,(R.shape[0],R.shape[2]))
         model_.train_on_batch(X,Y)#,validation_split=0.1)
 
-        if len(memory) >= 50000:
-#            memory = random.sample(memory,90000)
-            memory.pop()
         for i in range(1):
             play_game(eps,model_target,memory)
 
